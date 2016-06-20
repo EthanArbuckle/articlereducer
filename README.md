@@ -1,0 +1,2 @@
+# articlereducer
+reduces artlces
