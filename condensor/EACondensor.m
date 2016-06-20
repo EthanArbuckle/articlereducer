@@ -17,6 +17,7 @@
         _hasPerformedCondensing = NO;
         _originalString = originalString;
         
+        //sentence score has to be > average * average threshold to pass
         _averageThreshold = 1.4;
     }
     
@@ -39,27 +40,34 @@
     
     //split article up into sentences
     NSMutableArray *seperatedSentences = [[NSMutableArray alloc] init];
-                                          
+    
+    //these are possible sentence stoppers
     NSArray *sentenceEndings = @[@".", @"!", @"?"];
     
     NSUInteger contentLength = [_originalString length];
     NSUInteger currentIndex = 0;
     NSUInteger sentenceLength = 0;
     
+    //iterate every character
     while (currentIndex < contentLength) {
         
         NSRange currentCharRange = NSMakeRange(currentIndex++, 1);
+        
+        //current character
         NSString *currentChar = [_originalString substringWithRange:currentCharRange];
         
+        //keep track of the length of this sentence
         sentenceLength++;
         
+        //conpare character to sentence stoppers
         for (NSString *endingCandidate in sentenceEndings) {
             
             if ([currentChar isEqualToString:endingCandidate]) {
                 
+                //get sentence candidate contents
                 NSString *sentenceCandidate = [_originalString substringWithRange:NSMakeRange(currentIndex - sentenceLength, sentenceLength)];
                 
-                //check for a integer 2 indexes forward
+                //check for a integer 2 indexes forward (Aug 21. xxx)
                 if ([_originalString length] > currentCharRange.location + 2) {
                     
                     if ([[_originalString substringWithRange:NSMakeRange(currentCharRange.location + 2, 1)] intValue] > 0) {
@@ -68,7 +76,7 @@
                     }
                 }
                 
-                //check for comma 1 index forward
+                //check for comma 1 index forward (Miss., xxx)
                 if ([_originalString length] > currentCharRange.location + 1) {
                     
                     if ([[_originalString substringWithRange:NSMakeRange(currentCharRange.location + 1, 1)] isEqualToString:@","]) {
@@ -77,14 +85,16 @@
                     }
                 }
                 
-                //check for predefined prefixes that include periods
+                //check for predefined prefixes that include periods (Ms. Smith xxx)
                 NSArray *falsePositives = @[@"Mr", @"Mrs", @"Ms", @"Gov", @"Jr", @"Inc", @"Ph", @"St", @"Rd"];
                 NSUInteger exceptionIndex = 0;
                 BOOL foundException = NO;
                 while (exceptionIndex < [falsePositives count]) {
                     
+                    //make sure a character exists at (current index - prefix length)
                     if ((currentCharRange.location - [falsePositives[exceptionIndex] length]) > 0) {
                         
+                        //compare it to the preix
                         if ([[_originalString substringWithRange:NSMakeRange(currentCharRange.location - [falsePositives[exceptionIndex]  length], [falsePositives[exceptionIndex]  length])] isEqualToString:falsePositives[exceptionIndex] ]) {
                             
                             foundException = YES;
@@ -94,21 +104,23 @@
                     exceptionIndex++;
                 }
                 
+                //break if prefix found
                 if (foundException) {
                     
                     continue;
                 }
                 
-                //check if period is after a letter standing alone, ie. Ethan A. Arbuckle
+                //check if period is after a letter standing alone, (John B. Smith)
                 if ([_originalString length] > currentCharRange.location + 1 && currentCharRange.location - 2 > 0) {
                     
+                    //check for a space at one before current index, and 2 after current index
                     if ([[_originalString substringWithRange:NSMakeRange(currentCharRange.location + 1, 1)] isEqualToString:@" "] && [[_originalString substringWithRange:NSMakeRange(currentCharRange.location - 2, 1)] isEqualToString:@" "]) {
                         
                         continue;
                     }
                 }
                 
-                //check if char 2 indexes forward is a period, ie U.S.
+                //check if char 2 indexes forward is a period, (U.S.)
                 if ([_originalString length] > currentCharRange.location + 2) {
                     
                     if ([[_originalString substringWithRange:NSMakeRange(currentCharRange.location + 2, 1)] isEqualToString:@"."]) {
@@ -117,7 +129,7 @@
                     }
                 }
                 
-                //check if char 2 indexes backwards is a period, ie m.p.h
+                //check if char 2 indexes backwards is a period, ie (m.p.h)
                 if ([_originalString length] > currentCharRange.location - 2) {
                     
                     if ([[_originalString substringWithRange:NSMakeRange(currentCharRange.location - 2, 1)] isEqualToString:@"."]) {
@@ -139,22 +151,29 @@
     }
     
     _scoredSentences = [[NSMutableArray alloc] initWithCapacity:[seperatedSentences count]];
+    
+    //keep track of average score of sentences
     _averageScore = 0;
+    
+    //iterate sentences
     for (NSString *sentence in seperatedSentences) {
         
+        //scores will be the sum of al individual word lengths + overall sentence length
         CGFloat sentenceScore = [sentence length];
         
+        //iterate words
         for (NSString *singleWord in [sentence componentsSeparatedByString:@" "]) {
             
+            //increment score by word length
             sentenceScore += [singleWord length];
         }
-        
         
         [_scoredSentences insertObject:@(sentenceScore) atIndex:[seperatedSentences indexOfObject:sentence]];
         
         _averageScore += sentenceScore;
     }
     
+    //divide score sum by sentence count
     _averageScore /= [_scoredSentences count];
     
     //construct new string
@@ -163,11 +182,22 @@
         
         if ([sentenceScore floatValue] > (_averageScore * _averageThreshold)) {
             
-            [mutableNewString appendString:[NSString stringWithFormat:@"%@ ", seperatedSentences[[_scoredSentences indexOfObject:sentenceScore]]]];
+            //strip out any prepended spaces as there tends to be doubled sometimes
+            NSString *sentence = seperatedSentences[[_scoredSentences indexOfObject:sentenceScore]];
+            while ([[sentence substringWithRange:NSMakeRange(0, 1)] isEqualToString:@" "]) {
+                
+                //remove it
+                sentence = [sentence stringByReplacingCharactersInRange: NSMakeRange(0, 1) withString:@""];
+            }
+            
+            //add the single spade
+            [mutableNewString appendString:[NSString stringWithFormat:@"%@ ", sentence]];
         }
     }
     
     _finalString = mutableNewString;
+    
+    _reducementPercent = 100 - ((([_originalString length] / [_finalString length]) * [_finalString length]) / 100.0f);
     
 }
 
