@@ -32,7 +32,7 @@
     }
     
     //rid of formatting stuff
-    NSArray *replaceFormattingMarks = @[@"\n", @"\t"];
+    NSArray *replaceFormattingMarks = @[@"\n", @"\t", @"\r"];
     for (NSString *formatMark in replaceFormattingMarks) {
         
         _originalString = [_originalString stringByReplacingOccurrencesOfString:formatMark withString:@""];
@@ -184,8 +184,8 @@
         //iterate words
         for (NSString *singleWord in [sentence componentsSeparatedByString:@" "]) {
             
-            //increment score by word length
-            sentenceScore += [singleWord length];
+            //weight word length lightly
+            sentenceScore += [singleWord length] / 2;
             
             //increment score by word occurance count
             sentenceScore += [[wordOccurances valueForKey:singleWord] integerValue];
