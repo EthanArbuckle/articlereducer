@@ -155,7 +155,27 @@
     //keep track of average score of sentences
     _averageScore = 0;
     
-    //iterate sentences
+    //iterate sentences twice, first time to count occurances of words, second time to score the sentences
+    NSMutableDictionary *wordOccurances = [[NSMutableDictionary alloc] init];
+    for (NSString *sentence in seperatedSentences) {
+        
+        for (NSString *singleWord in [sentence componentsSeparatedByString:@" "]) {
+            
+            //check if word exists already
+            if ([wordOccurances valueForKey:singleWord]) {
+                
+                //if it does increment the usage count
+                [wordOccurances setValue:@([[wordOccurances valueForKey:singleWord] integerValue] + 1) forKey:singleWord];
+            }
+            else {
+                
+                //start the usage count at 1
+                [wordOccurances setValue:@(1) forKey:singleWord];
+            }
+        }
+        
+    }
+    
     for (NSString *sentence in seperatedSentences) {
         
         //scores will be the sum of al individual word lengths + overall sentence length
@@ -166,6 +186,9 @@
             
             //increment score by word length
             sentenceScore += [singleWord length];
+            
+            //increment score by word occurance count
+            sentenceScore += [[wordOccurances valueForKey:singleWord] integerValue];
         }
         
         [_scoredSentences insertObject:@(sentenceScore) atIndex:[seperatedSentences indexOfObject:sentence]];
@@ -196,9 +219,7 @@
     }
     
     _finalString = mutableNewString;
-    
-    _reducementPercent = 100 - ((([_originalString length] / [_finalString length]) * [_finalString length]) / 100.0f);
-    
+        
 }
 
 - (NSString *)condensedString {

@@ -17,7 +17,6 @@
 
 @property (nonatomic) CGFloat averageThreshold;
 @property (nonatomic) CGFloat averageScore;
-@property (nonatomic) CGFloat reducementPercent; //0-100
 
 @property (nonatomic) BOOL hasPerformedCondensing;
 @property (nonatomic) NSUInteger sentenceCount;
